@@ -8,7 +8,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from browser_use import Agent
-from langchain_anthropic import ChatAnthropic
+from browser_use.llm import ChatAnthropic
+from browser_use.browser.profile import BrowserProfile
 
 from personas import Persona
 
@@ -56,7 +57,11 @@ async def run_persona_agent(persona: Persona, url: str) -> Dict[str, Any]:
     llm = ChatAnthropic(model="claude-sonnet-4-20250514")
     task = build_task(persona, url)
 
-    agent = Agent(task=task, llm=llm, headless=True)
+    agent = Agent(
+        task=task,
+        llm=llm,
+        browser_profile=BrowserProfile(headless=True),
+    )
 
     try:
         result = await agent.run()
@@ -107,6 +112,10 @@ async def run_agents_parallel(personas, url: str, on_start=None, on_done=None):
             await on_done(persona, result)
         return result
 
-    # asyncio.gather runs all concurrently (up to 3 per CLAUDE.md)
-    results = await asyncio.gather(*[run_one(p) for p in personas[:3]])
-    return list(results)
+    # Run all personas in batches of 3 in parallel
+    results = []
+    for i in range(0, len(personas), 3):
+        batch = personas[i:i + 3]
+        batch_results = await asyncio.gather(*[run_one(p) for p in batch])
+        results.extend(batch_results)
+    return results

@@ -51,7 +51,7 @@ async def simulate_stream(url: str) -> AsyncGenerator[str, None]:
 
     yield sse_event("status", {"message": f"Starting simulation for {url}"})
 
-    personas = sample_personas(3)
+    personas = sample_personas(500)
 
     yield sse_event(
         "scraped",
